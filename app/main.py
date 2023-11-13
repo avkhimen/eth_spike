@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from numpy.lib.stride_tricks import sliding_window_view
 
 df = pd.read_csv('data/original_files/ETHXBT_60.csv', header=None,
                  names=['unix_timestamp','open_price','high_price','low_price','close_price','other_1','other_2'])
@@ -33,4 +34,10 @@ df['spike'] = (df['close_price_perc'] > threshold).fillna(False)
 
 df = df[['close_price','spike']]
 
+close_prices_list = sliding_window_view(df['close_price'], 4).tolist()
+
+spike_list = sliding_window_view(df['spike'], 1)[3:].tolist()
+
 print(df)
+#print(close_prices_list, len(close_prices_list))
+#print(spike_list, len(spike_list))
