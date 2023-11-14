@@ -22,120 +22,132 @@ from imblearn.over_sampling import SMOTE
 
 warnings.simplefilter('ignore')
 
-df = pd.read_csv('data/original_files/ETHXBT_60.csv', header=None,
-                 names=['unix_timestamp','open_price','high_price','low_price','close_price','other_1','other_2'])
+offsets = [10,20,30,40,50,60,70,80,90,100]
+nn_points = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,39,31]
 
-df = df.dropna()
+offsets = [90,100]
+nn_points = [25,39]
 
-df['unix_timestamp'] = df['unix_timestamp'].astype(int)
+for offset in offsets:
+    for nn_point in nn_points:
 
-df['timestamp'] = pd.to_datetime(df['unix_timestamp'], unit='s')
+        df = pd.read_csv('data/original_files/ETHXBT_60.csv', header=None,
+                        names=['unix_timestamp','open_price','high_price','low_price','close_price','other_1','other_2'])
 
-df = df.drop(['unix_timestamp', 'other_1', 'other_2'], axis=1)
+        df = df.dropna()
 
-df = df[['timestamp','open_price','high_price','low_price','close_price']]
+        df['unix_timestamp'] = df['unix_timestamp'].astype(int)
 
-df = df.resample('4H', on='timestamp').agg({
-    'open_price': 'first',
-    'high_price': 'max',
-    'low_price': 'min',
-    'close_price': 'last'
-    })
+        df['timestamp'] = pd.to_datetime(df['unix_timestamp'], unit='s')
 
-df = df.dropna()
+        df = df.drop(['unix_timestamp', 'other_1', 'other_2'], axis=1)
 
-df = df[['close_price']]
+        df = df[['timestamp','open_price','high_price','low_price','close_price']]
 
-df['close_price_perc'] = df['close_price'].pct_change()
+        df = df.resample('4H', on='timestamp').agg({
+            'open_price': 'first',
+            'high_price': 'max',
+            'low_price': 'min',
+            'close_price': 'last'
+            })
 
-df = df[1:]
+        df = df.dropna()
 
-df['close_price_perc'] = df['close_price_perc'] * 100
+        df = df[['close_price']]
 
-threshold = 4
+        df['close_price_perc'] = df['close_price'].pct_change()
 
-df['spike'] = (df['close_price_perc'] > threshold).fillna(False)
+        df = df[1:]
 
-df = df[['close_price','spike']]
+        df['close_price_perc'] = df['close_price_perc'] * 100
 
-offset = 10
+        threshold = 4
 
-close_prices_list = sliding_window_view(df['close_price'], offset).tolist()
+        df['spike'] = (df['close_price_perc'] > threshold).fillna(False)
 
-spike_list = sliding_window_view(df['spike'], 1).tolist()[offset-1:]
-spike_list = [elem[0] for elem in spike_list]
+        df = df[['close_price','spike']]
 
-X = close_prices_list[:-1]
-y_ = spike_list[1:]
+        offset = offset
 
-y = []
-for elem in y_:
-    y.append(str(elem))
+        close_prices_list = sliding_window_view(df['close_price'], offset).tolist()
 
-#print(df.head(10))
-#print(X[:5], len(X))
-#print(y[:5], len(y))
+        spike_list = sliding_window_view(df['spike'], 1).tolist()[offset-1:]
+        spike_list = [elem[0] for elem in spike_list]
 
-oversample = SMOTE()
-X, y = oversample.fit_resample(X, y)
+        X = close_prices_list[:-1]
+        y_ = spike_list[1:]
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
+        y = []
+        for elem in y_:
+            y.append(str(elem))
 
-#clf = svm.SVC()
-#clf = tree.DecisionTreeClassifier()
-#clf = HistGradientBoostingClassifier()
+        #print(df.head(10))
+        #print(X[:5], len(X))
+        #print(y[:5], len(y))
 
-names = [
-    "Nearest Neighbors",
-    "Linear SVM",
-    "RBF SVM",
-    "Gaussian Process",
-    "Decision Tree",
-    "Random Forest",
-    "Neural Net",
-    "AdaBoost",
-    "Naive Bayes",
-    "QDA",
-]
+        oversample = SMOTE()
+        #X, y = oversample.fit_resample(X, y)
 
-classifiers = [
-    KNeighborsClassifier(3),
-    SVC(kernel="linear", C=0.025, random_state=42),
-    SVC(gamma=2, C=1, random_state=42),
-    GaussianProcessClassifier(1.0 * RBF(1.0), random_state=42),
-    DecisionTreeClassifier(max_depth=5, random_state=42),
-    RandomForestClassifier(
-        max_depth=5, n_estimators=10, max_features=1, random_state=42
-    ),
-    MLPClassifier(alpha=1, max_iter=1000, random_state=42),
-    AdaBoostClassifier(random_state=42),
-    GaussianNB(),
-    QuadraticDiscriminantAnalysis(),
-]
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 
-for name, clf in zip(names, classifiers):
+        X_train, y_train = oversample.fit_resample(X_train, y_train)
 
-    clf.fit(X_train, y_train)
+        #clf = svm.SVC()
+        #clf = tree.DecisionTreeClassifier()
+        #clf = HistGradientBoostingClassifier()
 
-    yhat = clf.predict(X_test)
+        names = [
+            "Nearest Neighbors",
+            # "Gaussian Process",
+            # "Decision Tree",
+            # "Random Forest",
+            # "Neural Net",
+            # "AdaBoost",
+            # "Naive Bayes",
+            # "QDA",
+        ]
 
-    acc = accuracy_score(y_test, yhat)
-    print(name, 'Accuracy: %.3f' % acc)
-    print('Count of true in training set', y_train.count('True'))
-    print('Count of true in test set', y_test.count('True'))
+        classifiers = [
+            KNeighborsClassifier(nn_point),
+            # GaussianProcessClassifier(1.0 * RBF(1.0), random_state=42),
+            # DecisionTreeClassifier(max_depth=5, random_state=42),
+            # RandomForestClassifier(
+            #     max_depth=5, n_estimators=10, max_features=1, random_state=42
+            # ),
+            # MLPClassifier(alpha=1, max_iter=1000, random_state=42),
+            # AdaBoostClassifier(random_state=42),
+            # GaussianNB(),
+            # QuadraticDiscriminantAnalysis(),
+        ]
 
-    total_count = 0
-    count_wrong = 0
-    count_true_neg = 0
-    for i in range(len(y_test)):
-        total_count += 1
-        if yhat[i] != y_test[i]:
-            count_wrong += 1
-        if y_test[i] == 'True':
-            if yhat[i] != 'True':
-                count_true_neg += 1
+        for name, clf in zip(names, classifiers):
 
-    print('total_count', total_count)
-    print('count_wrong', count_wrong)
-    print('count_true_neg', count_true_neg)
-    print('---------------------------------------')
+            clf.fit(X_train, y_train)
+
+            yhat = clf.predict(X_test)
+
+            acc = accuracy_score(y_test, yhat)
+            #print(name, 'Accuracy: %.3f' % acc)
+            #print('Count of true in training set', y_train.count('True'))
+            #print('Count of true in test set', y_test.count('True'))
+
+            total_count = 0
+            count_wrong = 0
+            count_num_true = 0
+            count_true_neg = 0
+            for i in range(len(y_test)):
+                total_count += 1
+                if yhat[i] != y_test[i]:
+                    count_wrong += 1
+                if y_test[i] == 'True':
+                    count_num_true += 1
+                    if yhat[i] != 'True':
+                        count_true_neg += 1
+
+            #print('total_count', total_count)
+            #print('count_wrong', count_wrong)
+            #print('count_true_neg', count_true_neg)
+            #print('Real accuracy', (total_count - count_wrong)/total_count)
+            #print('Count num true ratio', (count_num_true - count_true_neg)/count_num_true)
+            print(nn_point, offset, 'Count num true ratio', (count_num_true - count_true_neg)/count_num_true)
+            #print('---------------------------------------')
