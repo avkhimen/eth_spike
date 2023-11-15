@@ -22,18 +22,18 @@ from imblearn.over_sampling import SMOTE
 
 warnings.simplefilter('ignore')
 
-offsets = [10,20,30,40,50,60,70,80,90,100]
-nn_points = [1,3,5,7,9,11,13,15,17,19,21,23,25,27,39,31]
+offsets = [50,60,70,80,90,100]
+nn_points = [17,19,21,23,25,27,39,31]
 
-offsets = [90,100]
-nn_points = [25,39]
+# offsets = [90]
+# nn_points = [39]
 
 for offset in offsets:
     for nn_point in nn_points:
 
         df = pd.read_csv('data/original_files/ETHXBT_60.csv', header=None,
                         names=['unix_timestamp','open_price','high_price','low_price','close_price','other_1','other_2'])
-
+        
         df = df.dropna()
 
         df['unix_timestamp'] = df['unix_timestamp'].astype(int)
@@ -87,6 +87,15 @@ for offset in offsets:
 
         oversample = SMOTE()
         #X, y = oversample.fit_resample(X, y)
+
+        X = np.array(X)
+
+        X_ = []
+        for arr in X:
+            #X_.append(np.concatenate((arr, arr/min(arr), arr/max(arr), arr/arr[0], arr/arr[-1], [max(arr)], [min(arr)], [np.mean(arr)]), axis=0))
+            X_.append(np.concatenate((arr, arr/max(arr), [max(arr)]), axis=0))
+
+        X = np.array(X_).tolist()
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 
