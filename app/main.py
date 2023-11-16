@@ -19,14 +19,15 @@ from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import HistGradientBoostingClassifier
 
 from imblearn.over_sampling import SMOTE
+from imblearn.under_sampling import RandomUnderSampler
 
 warnings.simplefilter('ignore')
 
 offsets = [50,60,70,80,90,100]
 nn_points = [17,19,21,23,25,27,39,31]
 
-# offsets = [90]
-# nn_points = [39]
+offsets = [90]
+nn_points = [17]
 
 for offset in offsets:
     for nn_point in nn_points:
@@ -86,6 +87,7 @@ for offset in offsets:
         #print(y[:5], len(y))
 
         oversample = SMOTE()
+        rus = RandomUnderSampler(random_state=42)
         #X, y = oversample.fit_resample(X, y)
 
         X = np.array(X)
@@ -93,13 +95,14 @@ for offset in offsets:
         X_ = []
         for arr in X:
             #X_.append(np.concatenate((arr, arr/min(arr), arr/max(arr), arr/arr[0], arr/arr[-1], [max(arr)], [min(arr)], [np.mean(arr)]), axis=0))
-            X_.append(np.concatenate((arr, arr/max(arr), [max(arr)]), axis=0))
+            X_.append(np.concatenate((arr, arr/min(arr), [min(arr)]), axis=0))
 
         X = np.array(X_).tolist()
 
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.25)
 
-        X_train, y_train = oversample.fit_resample(X_train, y_train)
+        #X_train, y_train = oversample.fit_resample(X_train, y_train)
+        X_train, y_train = rus.fit_resample(X_train, y_train)
 
         #clf = svm.SVC()
         #clf = tree.DecisionTreeClassifier()
